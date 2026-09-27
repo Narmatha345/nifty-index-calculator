@@ -173,13 +173,6 @@ _CSS = """
     border-radius: 999px;
 }
 .nifty-badge-dot { width: 0.45rem; height: 0.45rem; border-radius: 999px; background: #22C55E; }
-.nifty-avatar {
-    width: 2.1rem; height: 2.1rem; border-radius: 999px;
-    background: linear-gradient(135deg, #6366F1, #818CF8);
-    color: #fff; display: flex; align-items: center; justify-content: center;
-    font-weight: 700; font-size: 0.9rem;
-}
-.nifty-caret { color: #94A3B8; font-size: 0.75rem; }
 
 /* Home hero */
 .nifty-hero { display: flex; align-items: center; gap: 2rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
@@ -220,8 +213,6 @@ def render_top_header() -> None:
         """
         <div class="nifty-header-row">
             <span class="nifty-badge"><span class="nifty-badge-dot"></span>NIFTY 50 Analytics</span>
-            <span class="nifty-avatar">N</span>
-            <span class="nifty-caret">&#9662;</span>
         </div>
         """,
         unsafe_allow_html=True,
