@@ -1,0 +1,76 @@
+ticker,shares_outstanding,iwf,effective_from,effective_to,member_from,member_to,company_name,industry
+# SEED FILE - NOT auto-loaded by the app. This is a starting point, not ready-to-import data.
+#
+# Source: NSE official archive (archives.nseindia.com/content/indices/ind_nifty50list.csv),
+# fetched 2026-09-27. The 50 tickers, company names, and industries below are REAL and
+# CURRENT as of that date - verified directly from NSE, not invented.
+#
+# shares_outstanding, iwf, effective_from, and member_from are LEFT BLANK on purpose.
+# NSE does not publish these fields for free/in bulk anywhere - they are proprietary
+# index-construction inputs. You must source them yourself (official NIFTY factsheet /
+# methodology filings, a paid data vendor, or your own verified records) and fill them in
+# below before this file can be used.
+#
+# Once filled in:
+#   1. Delete the company_name and industry columns (or leave them - the app ignores
+#      extra columns), delete these comment lines, and delete this note.
+#   2. Rename/save as constituents.csv (or upload directly via the Reference Data
+#      Manager page's "Upload constituents CSV" - extra columns are fine there too).
+#   3. Do NOT leave shares_outstanding/iwf blank in the final upload - validation will
+#      reject blank/zero values, by design, so the app never computes with placeholders.
+#
+# Column meanings (same as templates/constituents_template.csv):
+#   shares_outstanding - total shares outstanding used for free-float calc (integer)
+#   iwf                - Investible Weight Factor as a decimal fraction, e.g. 0.55 (NOT a percent)
+#   effective_from/to   - date range (YYYY-MM-DD) this shares/iwf value applies; blank "to" = current
+#   member_from/to      - date range (YYYY-MM-DD) this stock was a NIFTY 50 member; blank "to" = current
+ADANIENT.NS,,,,,,,Adani Enterprises Ltd.,Metals & Mining
+ADANIPORTS.NS,,,,,,,Adani Ports and Special Economic Zone Ltd.,Services
+APOLLOHOSP.NS,,,,,,,Apollo Hospitals Enterprise Ltd.,Healthcare
+ASIANPAINT.NS,,,,,,,Asian Paints Ltd.,Consumer Durables
+AXISBANK.NS,,,,,,,Axis Bank Ltd.,Financial Services
+BAJAJ-AUTO.NS,,,,,,,Bajaj Auto Ltd.,Automobile and Auto Components
+BAJFINANCE.NS,,,,,,,Bajaj Finance Ltd.,Financial Services
+BAJAJFINSV.NS,,,,,,,Bajaj Finserv Ltd.,Financial Services
+BEL.NS,,,,,,,Bharat Electronics Ltd.,Capital Goods
+BHARTIARTL.NS,,,,,,,Bharti Airtel Ltd.,Telecommunication
+CIPLA.NS,,,,,,,Cipla Ltd.,Healthcare
+COALINDIA.NS,,,,,,,Coal India Ltd.,Oil Gas & Consumable Fuels
+DRREDDY.NS,,,,,,,Dr. Reddy's Laboratories Ltd.,Healthcare
+EICHERMOT.NS,,,,,,,Eicher Motors Ltd.,Automobile and Auto Components
+ETERNAL.NS,,,,,,,Eternal Ltd.,Consumer Services
+GRASIM.NS,,,,,,,Grasim Industries Ltd.,Construction Materials
+HCLTECH.NS,,,,,,,HCL Technologies Ltd.,Information Technology
+HDFCBANK.NS,,,,,,,HDFC Bank Ltd.,Financial Services
+HDFCLIFE.NS,,,,,,,HDFC Life Insurance Company Ltd.,Financial Services
+HINDALCO.NS,,,,,,,Hindalco Industries Ltd.,Metals & Mining
+HINDUNILVR.NS,,,,,,,Hindustan Unilever Ltd.,Fast Moving Consumer Goods
+ICICIBANK.NS,,,,,,,ICICI Bank Ltd.,Financial Services
+ITC.NS,,,,,,,ITC Ltd.,Fast Moving Consumer Goods
+INFY.NS,,,,,,,Infosys Ltd.,Information Technology
+INDIGO.NS,,,,,,,InterGlobe Aviation Ltd.,Services
+JSWSTEEL.NS,,,,,,,JSW Steel Ltd.,Metals & Mining
+JIOFIN.NS,,,,,,,Jio Financial Services Ltd.,Financial Services
+KOTAKBANK.NS,,,,,,,Kotak Mahindra Bank Ltd.,Financial Services
+LT.NS,,,,,,,Larsen & Toubro Ltd.,Construction
+M&M.NS,,,,,,,Mahindra & Mahindra Ltd.,Automobile and Auto Components
+MARUTI.NS,,,,,,,Maruti Suzuki India Ltd.,Automobile and Auto Components
+MAXHEALTH.NS,,,,,,,Max Healthcare Institute Ltd.,Healthcare
+NTPC.NS,,,,,,,NTPC Ltd.,Power
+NESTLEIND.NS,,,,,,,Nestle India Ltd.,Fast Moving Consumer Goods
+ONGC.NS,,,,,,,Oil & Natural Gas Corporation Ltd.,Oil Gas & Consumable Fuels
+POWERGRID.NS,,,,,,,Power Grid Corporation of India Ltd.,Power
+RELIANCE.NS,,,,,,,Reliance Industries Ltd.,Oil Gas & Consumable Fuels
+SBILIFE.NS,,,,,,,SBI Life Insurance Company Ltd.,Financial Services
+SHRIRAMFIN.NS,,,,,,,Shriram Finance Ltd.,Financial Services
+SBIN.NS,,,,,,,State Bank of India,Financial Services
+SUNPHARMA.NS,,,,,,,Sun Pharmaceutical Industries Ltd.,Healthcare
+TCS.NS,,,,,,,Tata Consultancy Services Ltd.,Information Technology
+TATACONSUM.NS,,,,,,,Tata Consumer Products Ltd.,Fast Moving Consumer Goods
+TMPV.NS,,,,,,,Tata Motors Passenger Vehicles Ltd.,Automobile and Auto Components
+TATASTEEL.NS,,,,,,,Tata Steel Ltd.,Metals & Mining
+TECHM.NS,,,,,,,Tech Mahindra Ltd.,Information Technology
+TITAN.NS,,,,,,,Titan Company Ltd.,Consumer Durables
+TRENT.NS,,,,,,,Trent Ltd.,Consumer Services
+ULTRACEMCO.NS,,,,,,,UltraTech Cement Ltd.,Construction Materials
+WIPRO.NS,,,,,,,Wipro Ltd.,Information Technology

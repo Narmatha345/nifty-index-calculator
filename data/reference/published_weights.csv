@@ -1,0 +1,14 @@
+ticker,weight_pct,as_of_date
+# OPTIONAL FILE - only used to display a comparison column in the Constituent
+# Table (published/reference NIFTY weight vs this app's independently
+# calculated weight). The app works fine without this file.
+#
+#   ticker      - Yahoo Finance symbol, e.g. RELIANCE.NS
+#   weight_pct  - published index weight as a percent, e.g. 9.87
+#   as_of_date  - date (YYYY-MM-DD) the published weight was taken from
+#
+# Source this from the official NSE/NIFTY factsheet. Do NOT invent numbers -
+# leave this file empty (as shipped) if you don't have a verified source.
+#
+# Example row shape (illustrative only, not real data):
+# TICKER.NS,0.00,YYYY-MM-DD

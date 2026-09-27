@@ -1,0 +1,20 @@
+ticker,shares_outstanding,iwf,effective_from,effective_to,member_from,member_to
+# HOW TO FILL THIS IN:
+#   ticker             - Yahoo Finance symbol, e.g. RELIANCE.NS
+#   shares_outstanding - total shares outstanding used for free-float calc (integer)
+#   iwf                - Investible Weight Factor as a decimal fraction, e.g. 0.55 (NOT a percent)
+#   effective_from     - date (YYYY-MM-DD) from which this shares/iwf value applies
+#   effective_to       - date (YYYY-MM-DD) this value stopped applying, or BLANK if still current
+#   member_from        - date (YYYY-MM-DD) the stock joined the NIFTY 50 index
+#   member_to          - date (YYYY-MM-DD) the stock left the NIFTY 50 index, or BLANK if still a member
+#
+# Add one row per (ticker, effective period). When shares outstanding or IWF change
+# (buybacks, splits, free-float reclassification, etc.), close out the old row with
+# effective_to and add a new row with the new effective_from - do not overwrite history.
+#
+# Source this data yourself from official NSE index factsheets / methodology documents.
+# Do NOT invent numbers here - this file ships empty on purpose.
+#
+# Example row shape (illustrative only, not real data - delete the leading '#' only
+# after replacing every value with a verified real figure):
+# TICKER.NS,0000000000,0.00,YYYY-MM-DD,,YYYY-MM-DD,
