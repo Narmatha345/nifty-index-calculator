@@ -18,23 +18,17 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 from common import inject_sidebar_shell_css, render_sidebar_footer
 
 home = st.Page("Home.py", title="Home", icon=":material/home:", url_path="Home", default=True)
-historical = st.Page(
-    "pages/1_Historical_Reconstruction.py",
-    title="Historical Reconstruction",
+discrepancy_history = st.Page(
+    "pages/1_Discrepancy_History.py",
+    title="Discrepancy History",
     icon=":material/calendar_month:",
-    url_path="Historical_Reconstruction",
+    url_path="Discrepancy_History",
 )
-constituent_table = st.Page(
-    "pages/2_Constituent_Table.py",
-    title="Constituent Table",
+constituent_weights = st.Page(
+    "pages/2_Constituent_Weights.py",
+    title="Constituent Weights",
     icon=":material/table_chart:",
-    url_path="Constituent_Table",
-)
-contribution = st.Page(
-    "pages/3_Contribution_Analysis.py",
-    title="Contribution Analysis",
-    icon=":material/pie_chart:",
-    url_path="Contribution_Analysis",
+    url_path="Constituent_Weights",
 )
 accuracy = st.Page(
     "pages/4_Accuracy_Metrics.py",
@@ -56,7 +50,7 @@ with st.sidebar:
     render_sidebar_footer()
 
 pg = st.navigation(
-    [home, historical, constituent_table, contribution, accuracy, reference_data_manager],
+    [home, discrepancy_history, constituent_weights, accuracy, reference_data_manager],
     position="sidebar",
 )
 pg.run()

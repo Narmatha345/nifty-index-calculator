@@ -1,22 +1,64 @@
-# NIFTY 50 Index Calculator
+# NIFTY Discrepancy Analysis Tool
 
-Independently reconstructs the NIFTY 50 index from free-float market cap
-(`Price x Shares x IWF`, summed and divided by a divisor), rather than by
-replaying the officially published index returns or weights. Compares the
-result to the official `^NSEI` value live and across history.
+Compares three time-series to identify where and when they diverge:
 
-## Why the app may show "MISSING DATA"
+1. **Calculated NIFTY** - `Sum(Stock Price x Official NSE Weight)`, calibrated
+   once against `^NSEI` at a chosen baseline date.
+2. **Actual NIFTY 50** - the official index (`^NSEI`), fetched live from
+   Yahoo Finance.
+3. **NIFTY ETF** - a configurable NIFTY-tracking ETF's market price (e.g.
+   NIFTYBEES.NS).
 
-Shares outstanding, Investible Weight Factor (IWF), historical NIFTY 50
-membership, and the index divisor are NSE-proprietary reference data. **This
-app never invents these values.** It ships with empty, annotated templates
-(`templates/*.csv`) and will show a clear MISSING DATA banner instead of a
-calculated number until you supply real data.
+This is **not** an independent index reconstruction (no Shares Outstanding /
+IWF / Divisor) and it does not label any series as "correct" - it exists to
+surface discrepancy, not resolve it.
 
-Source real values from official NSE index factsheets / methodology
-documents, then import them via the **Reference Data Manager** page in the
-app (or by editing `data/reference/*.csv` directly, using the same schema as
-the templates).
+## Calculation model
+
+**Weight Period vs Analysis Period are two separate controls.** The Weight
+Period (e.g. "August 2026") selects one official NSE monthly weight snapshot;
+that single snapshot is held constant across the entire Analysis Period,
+however long it is or whichever months it spans - it is never silently
+swapped for a different month's weights, and a month with no analysis-period
+overlap with the weight period does not trigger a "missing data" warning.
+
+1. For each date in the Analysis Period, `raw weighted value =
+   Sum(Price[t] * OfficialWeight[t] / 100)` over the 50 constituents, using
+   the ticker weights from the one selected **Weight Period** (see "Official
+   weight data" below).
+2. That raw value is calibrated **once**, at a user-chosen baseline date,
+   against the official `^NSEI` value on that date:
+   `normalization_factor = Official / Raw` at the baseline.
+3. `Calculated NIFTY = raw weighted value * normalization_factor` for every
+   date. The factor is fixed from the baseline date - it is never
+   recalculated day-to-day.
+4. Discrepancy = `Calculated - Actual` (absolute and %), with current/max/mean
+   error, RMSE, the date of maximum deviation, and a table of dates where the
+   deviation exceeds a configurable threshold.
+
+(`nifty_calc/engine.py` also has a `build_weight_panel`/rolling-snapshot mode
+used by the **Constituent Weights** page's weight-over-time browser, which
+*does* roll forward across successive monthly snapshots - that's for
+browsing weight history, not for the discrepancy calculation above.)
+
+## Official weight data
+
+NSE Indices (niftyindices.com) publishes **"Market Capitalisation, Weightage,
+Beta for NIFTY 50 & NIFTY Next 50"** monthly - the official weight of all 50
+constituents as of the last trading day of each month. This app fetches and
+caches that report automatically (`nifty_calc/weights.py`); confirmed
+available back to at least January 2010. No weight is ever invented: if NSE
+can't be reached for a month, it's simply not offered as a Weight Period
+option until a verified CSV covering it is imported via the **Reference Data
+Manager** page (`templates/weights_history_template.csv` describes the exact
+schema; the Manager also accepts NSE's raw `nifty50_mcwb.csv` export
+directly - both formats are auto-detected).
+
+The **Weight Period** selector (Home, Discrepancy History, Accuracy Metrics)
+lists every month currently available locally (cached and/or imported) and
+lets you fetch/check any other month on demand; picking one shows
+"Official weight data is not available for this month." rather than
+silently substituting a different month's data.
 
 ## Setup
 
@@ -32,61 +74,45 @@ pip install -r requirements.txt
 streamlit run app/streamlit_app.py
 ```
 
-## Load reference data
-
-1. Open the **Reference Data Manager** page (left sidebar).
-2. Download the constituent and divisor-history templates, fill them in with
-   verified real data (see the comments inside each template for the exact
-   field meanings and the divisor calibration formula), and upload them back.
-3. Optionally supply `published_weights.csv` to see the official/reference
-   NIFTY weight next to this app's independently calculated weight in the
-   Constituent Table.
-4. Use the "Calibrate a new divisor" tool once you have constituent data
-   loaded and a date where official `^NSEI` and constituent prices are both
-   available. After that, the calculated index runs independently - the app
-   does not keep re-calibrating against `^NSEI`.
-
 ## Pages
 
-- **Home** - live dashboard: Official vs Calculated NIFTY, difference, and a
-  range-selectable comparison chart (1D/5D/1M/3M/6M/1Y/MAX/Custom).
-- **Historical Reconstruction** - calculated vs official index across any
-  date range, with CSV export.
-- **Constituent Table** - per-stock price, shares, IWF, free-float market
-  cap, calculated weight, price change, and point contribution, as of a
-  chosen date.
-- **Contribution Analysis** - which stocks drove the calculated index's move
-  over a date range; contributions reconcile exactly to the total change.
-- **Accuracy Metrics** - current error, MAE, RMSE, and max error between the
-  calculated and official index over a selected history.
-- **Reference Data Manager** - import/validate constituent, divisor, and
-  published-weight CSVs; run one-time divisor calibration.
+- **Home** - main dashboard: data period, ETF/baseline/interval controls,
+  summary metrics, the three-line comparison chart (zoom/hover/range
+  buttons/rangeslider), discrepancy table, constituent weight table, and a
+  data source/status panel.
+- **Discrepancy History** - Calculated vs Actual vs ETF over any date range,
+  with CSV export.
+- **Constituent Weights** - the official weight of every constituent as of a
+  chosen date, plus a weight-over-time chart for selected stocks.
+- **Accuracy Metrics** - discrepancy statistics (current/mean/RMSE/max) and a
+  table of unusually large deviations over a chosen range.
+- **Reference Data Manager** - check/refresh the auto-fetched NSE weight
+  data, and import a verified fallback CSV for any month NSE couldn't be
+  reached for.
 
 ## Project layout
 
 ```
-config.py              paths and constants
+config.py              paths and constants (ETF options, NSE endpoint, etc.)
 nifty_calc/
-  schemas.py            reference-data schemas/validation
-  reference_data.py     time-varying constituents (shares/IWF/membership)
-  divisor.py             divisor history + calibration
+  weights.py             official NSE weight fetch/cache/parse + history lookups
   price_data.py          yfinance batch download + local parquet cache
-  engine.py               pure index-calculation functions (no I/O/UI)
+  engine.py               pure calculation functions (weighting, baseline
+                          calibration, discrepancy metrics) - no I/O/UI
   validation.py           missing-data readiness checks
   ssl_bootstrap.py        optional local CA trust fix (see certs/README.md)
-data/reference/           active CSV reference data (starts empty)
-templates/                annotated, empty CSV templates
+data/reference/           verified fallback weight CSV (starts empty)
+data/cache/               auto-fetched price + weight cache (gitignored)
+templates/                annotated, empty CSV template for the fallback import
 app/                      Streamlit UI (Home.py + pages/)
-tests/                    unit tests for the calculation engine
+tests/                    unit tests for weights parsing + the calculation engine
 ```
 
 ## Notes
 
-- Price data is cached locally in `data/cache/` as Parquet files, refreshed
-  incrementally (only the missing date range is re-downloaded).
-- If a requested chart resolution (e.g. 1-minute) isn't available from
-  Yahoo Finance for the selected range, the app automatically falls back to
-  a coarser resolution and labels which one is being shown.
-- `certs/local_root_ca.pem`, if present, lets `yfinance` work on machines
-  where antivirus/corporate software intercepts HTTPS traffic (see
+- Price data is cached locally in `data/cache/prices/` as Parquet files;
+  weight data in `data/cache/weights/` as CSVs - both refreshed
+  incrementally, not re-downloaded on every run.
+- `certs/local_root_ca.pem`, if present, lets `yfinance`/`requests` work on
+  machines where antivirus/corporate software intercepts HTTPS traffic (see
   `certs/README.md`). It's a no-op on machines that don't need it.

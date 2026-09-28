@@ -1,0 +1,51 @@
+as_of_date,ticker,company_name,industry,weight_pct
+2026-08-31,ADANIENT.NS,Adani Enterprises Ltd.,Trading - Minerals,0.75
+2026-08-31,ADANIPORTS.NS,Adani Ports and Special Economic Zone Ltd.,Port & Port services,1.07
+2026-08-31,APOLLOHOSP.NS,Apollo Hospitals Enterprise Ltd.,Hospital,0.83
+2026-08-31,ASIANPAINT.NS,Asian Paints Ltd.,Paints,1.09
+2026-08-31,AXISBANK.NS,Axis Bank Ltd.,Private Sector Bank,3.39
+2026-08-31,BAJAJ-AUTO.NS,Bajaj Auto Ltd.,2/3 Wheelers,1.22
+2026-08-31,BAJAJFINSV.NS,Bajaj Finserv Ltd.,Holding Company,1.06
+2026-08-31,BAJFINANCE.NS,Bajaj Finance Ltd.,Non Banking Financial Company (NBFC),2.57
+2026-08-31,BEL.NS,Bharat Electronics Ltd.,Aerospace & Defense,1.35
+2026-08-31,BHARTIARTL.NS,Bharti Airtel Ltd.,Telecom - Cellular & Fixed line services,5.0
+2026-08-31,CIPLA.NS,Cipla Ltd.,Pharmaceuticals,0.72
+2026-08-31,COALINDIA.NS,Coal India Ltd.,Coal,0.87
+2026-08-31,DRREDDY.NS,Dr. Reddy's Laboratories Ltd.,Pharmaceuticals,0.64
+2026-08-31,EICHERMOT.NS,Eicher Motors Ltd.,2/3 Wheelers,0.99
+2026-08-31,ETERNAL.NS,Eternal Ltd.,E-Retail/ E-Commerce,2.15
+2026-08-31,GRASIM.NS,Grasim Industries Ltd.,Cement & Cement Products,1.15
+2026-08-31,HCLTECH.NS,HCL Technologies Ltd.,Computers - Software & Consulting,1.26
+2026-08-31,HDFCBANK.NS,HDFC Bank Ltd.,Private Sector Bank,9.85
+2026-08-31,HDFCLIFE.NS,HDFC Life Insurance Company Ltd.,Life Insurance,0.53
+2026-08-31,HINDALCO.NS,Hindalco Industries Ltd.,Aluminium,1.33
+2026-08-31,HINDUNILVR.NS,Hindustan Unilever Ltd.,Diversified FMCG,1.58
+2026-08-31,ICICIBANK.NS,ICICI Bank Ltd.,Private Sector Bank,9.45
+2026-08-31,INDIGO.NS,InterGlobe Aviation Ltd.,Airline,1.08
+2026-08-31,INFY.NS,Infosys Ltd.,Computers - Software & Consulting,3.61
+2026-08-31,ITC.NS,ITC Ltd.,Diversified FMCG,2.24
+2026-08-31,JIOFIN.NS,Jio Financial Services Ltd.,Investment Company,0.72
+2026-08-31,JSWSTEEL.NS,JSW Steel Ltd.,Iron & Steel,1.11
+2026-08-31,KOTAKBANK.NS,Kotak Mahindra Bank Ltd.,Private Sector Bank,2.8
+2026-08-31,LT.NS,Larsen & Toubro Ltd.,Civil Construction,4.3
+2026-08-31,M&M.NS,Mahindra & Mahindra Ltd.,Passenger Cars & Utility Vehicles,2.66
+2026-08-31,MARUTI.NS,Maruti Suzuki India Ltd.,Passenger Cars & Utility Vehicles,1.6
+2026-08-31,MAXHEALTH.NS,Max Healthcare Institute Ltd.,Hospital,0.7
+2026-08-31,NESTLEIND.NS,Nestle India Ltd.,Packaged Foods,0.97
+2026-08-31,NTPC.NS,NTPC Ltd.,Power Generation,1.41
+2026-08-31,ONGC.NS,Oil & Natural Gas Corporation Ltd.,Oil Exploration & Production,0.82
+2026-08-31,POWERGRID.NS,Power Grid Corporation of India Ltd.,Power - Transmission,1.08
+2026-08-31,RELIANCE.NS,Reliance Industries Ltd.,Refineries & Marketing,7.83
+2026-08-31,SBILIFE.NS,SBI Life Insurance Company Ltd.,Life Insurance,0.71
+2026-08-31,SBIN.NS,State Bank of India,Public Sector Bank,3.98
+2026-08-31,SHRIRAMFIN.NS,Shriram Finance Ltd.,Non Banking Financial Company (NBFC),1.41
+2026-08-31,SUNPHARMA.NS,Sun Pharmaceutical Industries Ltd.,Pharmaceuticals,1.91
+2026-08-31,TATACONSUM.NS,Tata Consumer Products Ltd.,Tea & Coffee,0.61
+2026-08-31,TATASTEEL.NS,Tata Steel Ltd.,Iron & Steel,1.38
+2026-08-31,TCS.NS,Tata Consultancy Services Ltd.,Computers - Software & Consulting,2.22
+2026-08-31,TECHM.NS,Tech Mahindra Ltd.,Computers - Software & Consulting,0.94
+2026-08-31,TITAN.NS,Titan Company Ltd.,"Gems, Jewellery And Watches",1.91
+2026-08-31,TMPV.NS,Tata Motors Passenger Vehicles Ltd.,Passenger Cars & Utility Vehicles,0.59
+2026-08-31,TRENT.NS,Trent Ltd.,Speciality Retail,0.87
+2026-08-31,ULTRACEMCO.NS,UltraTech Cement Ltd.,Cement & Cement Products,1.23
+2026-08-31,WIPRO.NS,Wipro Ltd.,Computers - Software & Consulting,0.45

@@ -1,40 +1,33 @@
-"""Checks whether there is enough reference data to run a calculation for a
-given date, so the UI can show an honest MISSING DATA state instead of
-silently computing with placeholders.
-"""
+"""Checks whether there is enough official weight data to run the
+discrepancy analysis for a given range/date, so the UI can show an honest
+MISSING DATA state instead of silently computing with placeholders."""
 
 from __future__ import annotations
 
 import pandas as pd
 
-from nifty_calc import divisor as divisor_mod
-from nifty_calc import reference_data
+from nifty_calc import weights
 from nifty_calc.schemas import MissingDataReport
 
 
-def check_readiness(
-    constituents_df: pd.DataFrame,
-    divisor_df: pd.DataFrame,
-    as_of_date=None,
-) -> MissingDataReport:
+def check_readiness(weights_history: pd.DataFrame, missing_months: list[str] | None = None, as_of_date=None) -> MissingDataReport:
     missing: list[str] = []
 
-    if reference_data.is_empty(constituents_df):
+    if weights.is_empty(weights_history):
         missing.append(
-            "no constituent data loaded (data/reference/constituents.csv has no rows - "
-            "import real shares outstanding / IWF / membership data via the Reference Data Manager page)"
+            "no official NIFTY 50 weight data available for this range - NSE Indices could not be "
+            "reached and no verified weight CSV has been imported via the Reference Data Manager page"
         )
-    if divisor_mod.is_empty(divisor_df):
+    elif missing_months:
         missing.append(
-            "no divisor calibrated (data/reference/divisor_history.csv has no rows - "
-            "calibrate a divisor via the Reference Data Manager page)"
+            f"{len(missing_months)} month(s) have no official weight data ({', '.join(missing_months[:6])}"
+            f"{'...' if len(missing_months) > 6 else ''}) - NSE Indices could not be reached for them and "
+            "no verified fallback CSV covers them"
         )
 
-    if as_of_date is not None and not missing:
-        snap = reference_data.get_snapshot(constituents_df, as_of_date)
+    if as_of_date is not None and not weights.is_empty(weights_history):
+        snap = weights.get_weight_snapshot(weights_history, as_of_date)
         if snap.empty:
-            missing.append(f"no constituents are effective/members as of {pd.Timestamp(as_of_date).date()}")
-        if divisor_mod.get_divisor(divisor_df, as_of_date) is None:
-            missing.append(f"no divisor covers {pd.Timestamp(as_of_date).date()}")
+            missing.append(f"no official weight snapshot on or before {pd.Timestamp(as_of_date).date()}")
 
     return MissingDataReport(missing_fields=missing)

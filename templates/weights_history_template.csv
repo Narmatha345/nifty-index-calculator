@@ -1,0 +1,21 @@
+as_of_date,ticker,company_name,industry,weight_pct
+# OPTIONAL FALLBACK FILE - only used for months the app could not fetch
+# automatically from NSE Indices (niftyindices.com). The app tries to fetch
+# and cache this data live for you; you should never normally need to fill
+# this in yourself.
+#
+#   as_of_date   - the month-end date (YYYY-MM-DD) this weight snapshot is
+#                  officially as-of (matches the "Last day of trading was ..."
+#                  line in NSE's own report for that month).
+#   ticker       - Yahoo Finance symbol, e.g. RELIANCE.NS
+#   company_name - as published by NSE (optional, display only)
+#   industry     - as published by NSE (optional, display only)
+#   weight_pct   - official NIFTY 50 index weight as a percent, e.g. 9.85
+#
+# Source: NSE Indices (niftyindices.com) -> Reports -> Historical Data ->
+# "Market Capitalisation, Weightage, Beta for NIFTY 50 & NIFTY Next 50".
+# One row per constituent per month. Do NOT invent numbers - leave this file
+# empty (as shipped) unless you have a verified official export.
+#
+# Example row shape (illustrative only, not real data):
+# YYYY-MM-DD,TICKER.NS,Company Name Ltd.,Sector Name,0.00
