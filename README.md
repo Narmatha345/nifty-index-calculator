@@ -2,8 +2,9 @@
 
 Compares three time-series to identify where and when they diverge:
 
-1. **Calculated NIFTY** - `Sum(Stock Price x Official NSE Weight)`, calibrated
-   once against `^NSEI` at a chosen baseline date.
+1. **Calculated NIFTY** - official NSE weights applied to each stock's price
+   relative to the weights' as-of date, calibrated once against `^NSEI` at a
+   chosen baseline date.
 2. **Actual NIFTY 50** - the official index (`^NSEI`), fetched live from
    Yahoo Finance.
 3. **NIFTY ETF** - a configurable NIFTY-tracking ETF's market price (e.g.
@@ -23,9 +24,19 @@ swapped for a different month's weights, and a month with no analysis-period
 overlap with the weight period does not trigger a "missing data" warning.
 
 1. For each date in the Analysis Period, `raw weighted value =
-   Sum(Price[t] * OfficialWeight[t] / 100)` over the 50 constituents, using
-   the ticker weights from the one selected **Weight Period** (see "Official
-   weight data" below).
+   Sum(Weight * Price[t] / AnchorPrice) / Sum(Weight) * 100` over the 50
+   constituents, using the ticker weights from the one selected **Weight
+   Period** (see "Official weight data" below). `AnchorPrice` is each
+   stock's close on/before that snapshot's as-of date. NSE weights are
+   free-float market-cap shares *on that date*, so they already include that
+   day's price; dividing by it turns each weight into a fixed holding.
+   (Multiplying weights by price directly would count price twice and let
+   high-priced shares dominate regardless of their actual weight.) Prices are
+   fetched back to the as-of date even when it's outside the Analysis Period.
+   A constituent's last price is carried forward over days it didn't trade;
+   a date where under half the index weight has a genuine price is a gap in
+   the price feed and gets no calculated value. Coverage % counts only
+   genuine (not carried-forward) prices.
 2. That raw value is calibrated **once**, at a user-chosen baseline date,
    against the official `^NSEI` value on that date:
    `normalization_factor = Official / Raw` at the baseline.
@@ -40,6 +51,27 @@ overlap with the weight period does not trigger a "missing data" warning.
 used by the **Constituent Weights** page's weight-over-time browser, which
 *does* roll forward across successive monthly snapshots - that's for
 browsing weight history, not for the discrepancy calculation above.)
+
+## Corporate actions
+
+NSE weight files list each constituent under its symbol on the snapshot
+date, and Yahoo Finance prices don't account for every corporate action, so
+`nifty_calc/corporate_actions.py` bridges the two:
+
+- **Renames / mergers** - `TATAMOTORS` -> `TMPV`, `ZOMATO` -> `ETERNAL`,
+  `LTIM` -> `LTM`, and `HDFC` (merged into HDFC Bank, 42:25) -> `HDFCBANK`.
+  The fixed swap ratio cancels out in price relatives.
+- **Demergers** - Yahoo doesn't adjust the parent's history, so the
+  spun-off value (NSE's dummy price) is added back after the ex-date for
+  weight snapshots taken before it, and taken out before the ex-date for
+  snapshots taken after it. NSE dummy constituents (`DUMMYTATAM`,
+  `DUMMYHDLVR`) are held at their constant dummy price, as NSE does.
+- **Placeholder bars** - zero-volume bars Yahoo serves for sessions it has
+  no data for (all NSE stocks on 2025-03-18, and exchange holidays) are
+  treated as missing prices.
+
+Splits and bonus issues need nothing: Yahoo's `Close` is already adjusted
+for them. A new rename or demerger needs one entry in that module.
 
 ## Official weight data
 
@@ -97,6 +129,8 @@ config.py              paths and constants (ETF options, NSE endpoint, etc.)
 nifty_calc/
   weights.py             official NSE weight fetch/cache/parse + history lookups
   price_data.py          yfinance batch download + local parquet cache
+  corporate_actions.py   NSE symbol -> Yahoo price mapping (renames, mergers,
+                          demergers, placeholder bars)
   engine.py               pure calculation functions (weighting, baseline
                           calibration, discrepancy metrics) - no I/O/UI
   validation.py           missing-data readiness checks

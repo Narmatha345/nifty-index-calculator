@@ -49,12 +49,31 @@ def _write_cache(ticker: str, interval: str, df: pd.DataFrame) -> None:
     df.to_parquet(_cache_path(ticker, interval))
 
 
-def _update_meta_entry(meta: dict, ticker: str, interval: str, df: pd.DataFrame) -> None:
-    key = f"{ticker}__{interval}"
-    meta[key] = {
-        "start": str(df.index.min()),
-        "end": str(df.index.max()),
-        "last_fetched": pd.Timestamp.utcnow().isoformat(),
+def _meta_key(ticker: str, interval: str) -> str:
+    return f"{ticker}__{interval}"
+
+
+def _covered_range(meta: dict, ticker: str, interval: str, cached: pd.DataFrame | None):
+    """The date range already requested from yfinance for this ticker - not
+    just the first/last bar held, which would make a stock listed after the
+    requested start (or a range starting on a holiday) look permanently
+    incomplete and get re-downloaded on every call. Falls back to the cached
+    bars' span for entries written before coverage was tracked."""
+    entry = meta.get(_meta_key(ticker, interval), {})
+    if "covered_start" in entry and "covered_end" in entry:
+        return pd.Timestamp(entry["covered_start"]), pd.Timestamp(entry["covered_end"])
+    if cached is not None and not cached.empty:
+        return cached.index.min(), cached.index.max()
+    return None
+
+
+def _update_meta_entry(meta: dict, ticker: str, interval: str, df: pd.DataFrame, covered_start, covered_end) -> None:
+    meta[_meta_key(ticker, interval)] = {
+        "start": str(df.index.min()) if not df.empty else None,
+        "end": str(df.index.max()) if not df.empty else None,
+        "covered_start": str(covered_start),
+        "covered_end": str(covered_end),
+        "last_fetched": pd.Timestamp.now("UTC").isoformat(),
     }
 
 
@@ -90,27 +109,43 @@ def download_batch(
     parquet cache and only requesting the missing date range from yfinance
     (a single batched yf.download call, never one request per ticker).
 
+    Today's bar is never treated as final: a range reaching today always
+    re-requests the last few days so intraday/partial closes get refreshed.
+
     Returns {ticker: DataFrame} sliced to [start, end].
     """
     start_ts = pd.Timestamp(start)
     end_ts = pd.Timestamp(end)
+    # Bars up to yesterday are final; today's may still change.
+    final_through = min(end_ts, pd.Timestamp.today().normalize() - pd.Timedelta(days=1))
     meta = _load_meta()
 
     cached = {t: (None if force_refresh else _read_cache(t, interval)) for t in tickers}
 
-    to_fetch = [
-        t
-        for t in tickers
-        if cached[t] is None or cached[t].empty
-        or cached[t].index.min() > start_ts
-        or cached[t].index.max() < end_ts
-    ]
+    # Per ticker, the slice of [start, end] not yet covered.
+    windows: dict[str, tuple[pd.Timestamp, pd.Timestamp]] = {}
+    for t in tickers:
+        covered = None if force_refresh else _covered_range(meta, t, interval, cached[t])
+        if covered is None:
+            windows[t] = (start_ts, end_ts)
+            continue
+        cov_start, cov_end = covered
+        need_start, need_end = start_ts < cov_start, end_ts > cov_end
+        if need_start and need_end:
+            windows[t] = (start_ts, end_ts)
+        elif need_start:
+            windows[t] = (start_ts, cov_start)
+        elif need_end:
+            windows[t] = (cov_end - pd.Timedelta(days=5), end_ts)
 
-    if to_fetch:
+    if windows:
+        to_fetch = list(windows)
+        fetch_start = min(w[0] for w in windows.values())
+        fetch_end = max(w[1] for w in windows.values())
         raw = yf.download(
             tickers=to_fetch,
-            start=start_ts,
-            end=end_ts + pd.Timedelta(days=1),
+            start=fetch_start,
+            end=fetch_end + pd.Timedelta(days=1),
             interval=interval,
             group_by="ticker",
             threads=True,
@@ -118,12 +153,19 @@ def download_batch(
             progress=False,
         )
         fetched = _split_batch_download(raw, to_fetch)
+        # An entirely empty batch means the request itself failed (network,
+        # rate limit) - don't record that range as covered, so it's retried.
+        request_ok = any(not df.empty for df in fetched.values())
         for t in to_fetch:
             merged = _merge_frames(cached.get(t), fetched.get(t, pd.DataFrame()))
             cached[t] = merged
             if not merged.empty:
                 _write_cache(t, interval, merged)
-                _update_meta_entry(meta, t, interval, merged)
+            if request_ok:
+                prev = _covered_range(meta, t, interval, None) if not force_refresh else None
+                cov_start = min(fetch_start, prev[0]) if prev else fetch_start
+                cov_end = max(final_through, prev[1]) if prev else final_through
+                _update_meta_entry(meta, t, interval, merged, cov_start, cov_end)
 
     _save_meta(meta)
 

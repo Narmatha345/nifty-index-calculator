@@ -39,6 +39,14 @@ def load_price_history(tickers: tuple, start, end, interval: str = "1d"):
     return data, interval_used
 
 
+def price_fetch_window(start_ts, end_ts, weight_as_of):
+    """The analysis range widened to also cover the weight snapshot's as-of
+    date (plus a short lookback for holidays), since engine.anchor_prices
+    needs each stock's close on that date even when it's outside the range."""
+    weight_as_of = pd.Timestamp(weight_as_of)
+    return min(start_ts, weight_as_of - pd.Timedelta(days=10)), max(end_ts, weight_as_of)
+
+
 def resolve_range(range_choice: str, custom_start=None, custom_end=None):
     """Turn a CHART_RANGE_OPTIONS choice into concrete (start, end) timestamps."""
     if range_choice == "Custom":

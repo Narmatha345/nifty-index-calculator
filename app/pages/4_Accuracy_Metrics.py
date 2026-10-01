@@ -21,13 +21,14 @@ import config
 from common import (
     inject_css,
     load_price_history,
+    price_fetch_window,
     read_home_inputs,
     render_home_inputs_recap,
     render_missing_data_alert,
     render_top_header,
     render_warning_alert,
 )
-from nifty_calc import engine, weights
+from nifty_calc import corporate_actions, engine, weights
 
 st.set_page_config(page_title="Accuracy Metrics", layout="wide")
 inject_css()
@@ -53,20 +54,23 @@ if period_df.empty:
     st.stop()
 
 weight_series = period_df.set_index("ticker")["weight_pct"]
+weight_as_of = period_df["as_of_date"].max()
 tickers = list(weight_series.index)
-fetch_tickers = tuple(sorted(set(tickers) | {config.OFFICIAL_INDEX_TICKER}))
-price_dict, interval_used = load_price_history(fetch_tickers, start_ts, end_ts, "1d")
+fetch_tickers = tuple(sorted(set(corporate_actions.price_sources(tickers)) | {config.OFFICIAL_INDEX_TICKER}))
+fetch_start, fetch_end = price_fetch_window(start_ts, end_ts, weight_as_of)
+price_dict, interval_used = load_price_history(fetch_tickers, fetch_start, fetch_end, "1d")
 official_df = price_dict.get(config.OFFICIAL_INDEX_TICKER, pd.DataFrame())
-stock_prices = {t: df for t, df in price_dict.items() if t != config.OFFICIAL_INDEX_TICKER}
-close_panel = engine.build_close_panel(stock_prices)
+full_close_panel = corporate_actions.build_constituent_close_panel(tickers, price_dict, weight_as_of)
+anchor = engine.anchor_prices(full_close_panel, weight_as_of) if not full_close_panel.empty else pd.Series(dtype=float)
+close_panel = full_close_panel.loc[start_ts:end_ts]
 
 if close_panel.empty or official_df.empty:
     render_warning_alert("Not enough price data (calculated and/or actual) in this range.")
     st.stop()
 
-official_series = official_df["Close"]
+official_series = official_df["Close"].loc[start_ts:end_ts]
 weight_panel = engine.build_static_weight_panel(weight_series, close_panel.index)
-raw_series, coverage_pct = engine.compute_raw_weighted_series(close_panel, weight_panel)
+raw_series, coverage_pct = engine.compute_raw_weighted_series(close_panel, weight_panel, anchor)
 
 try:
     baseline_info = engine.calibrate_baseline(raw_series, official_series, baseline_date)
@@ -87,7 +91,7 @@ with st.container(border=True):
     m1.metric("Current diff", f"{metrics['current_diff']:+,.2f}", f"{metrics['current_diff_pct']:+.3f}%")
     m2.metric("Mean absolute diff", f"{metrics['mean_abs_diff']:,.2f}", f"{metrics['mean_abs_diff_pct']:.3f}% avg")
     m3.metric("RMSE", f"{metrics['rmse']:,.2f}")
-    m4.metric("Max deviation", f"{metrics['max_abs_diff']:+,.2f}", f"{metrics['max_abs_diff_pct']:+.3f}%")
+    m4.metric("Max deviation", f"{metrics['max_diff']:+,.2f}", f"{metrics['max_abs_diff_pct']:+.3f}%")
     st.caption(f"Based on {metrics['n_observations']} overlapping observations. Max deviation on **{metrics['max_abs_diff_date'].date()}**.")
 
 with st.container(border=True):

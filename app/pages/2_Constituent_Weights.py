@@ -15,7 +15,7 @@ sys.path.insert(0, str(_APP_DIR))
 
 import config
 from common import inject_css, load_price_history, load_weights_history, render_missing_data_alert, render_top_header, render_warning_alert
-from nifty_calc import engine, validation, weights
+from nifty_calc import corporate_actions, validation, weights
 
 st.set_page_config(page_title="Constituent Weights", layout="wide")
 inject_css()
@@ -47,9 +47,9 @@ if actual_snapshot_date.normalize() != as_of_ts.normalize():
 
 tickers = list(snapshot.index)
 price_dict, _ = load_price_history(
-    tuple(tickers), actual_snapshot_date - pd.Timedelta(days=10), actual_snapshot_date, "1d"
+    tuple(corporate_actions.price_sources(tickers)), actual_snapshot_date - pd.Timedelta(days=10), actual_snapshot_date, "1d"
 )
-close_panel = engine.build_close_panel(price_dict)
+close_panel = corporate_actions.build_constituent_close_panel(tickers, price_dict, actual_snapshot_date)
 latest_price = close_panel.iloc[-1] if not close_panel.empty else pd.Series(dtype=float)
 
 table = snapshot.copy()

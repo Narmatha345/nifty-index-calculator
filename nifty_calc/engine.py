@@ -4,9 +4,15 @@ returns them out, so it's unit-testable in isolation from yfinance/NSE and
 the UI.
 
 Calculation model (see README for the full rationale):
-  1. Weighted value = Sum(Price[t] * OfficialWeight[t] / 100) for each date,
-     using the most recent official NSE monthly weight snapshot on/before
-     that date (never interpolated/guessed between snapshots).
+  1. NSE's official weight is each stock's share of free-float market cap
+     (price x shares x IWF) on the snapshot's as-of date - i.e. the weight
+     already contains that day's price. So each weight is converted into a
+     fixed holding: units = Weight / AnchorPrice, where AnchorPrice is the
+     stock's close on/before the snapshot's as-of date. Raw value[t] =
+     Sum(Weight * Price[t] / AnchorPrice) / Sum(Weight) * 100, i.e. a
+     weighted average of price relatives - equal to 100 on the as-of date.
+     (Sum(Price * Weight) would count price twice and let high-priced
+     shares like MARUTI dominate regardless of their actual index weight.)
   2. That raw weighted value is calibrated ONCE, at a chosen baseline date,
      against the official ^NSEI value on that date, producing a single
      normalization factor.
@@ -62,27 +68,53 @@ def build_static_weight_panel(weight_series: pd.Series, dates) -> pd.DataFrame:
     )
 
 
-def compute_raw_weighted_series(close_panel: pd.DataFrame, weight_panel: pd.DataFrame) -> tuple[pd.Series, pd.Series]:
-    """For each date present in both panels: raw weighted value = Sum(price *
-    weight/100) over tickers that have BOTH a price and an official weight
-    that day. Also returns `coverage_pct` = the share of official index
-    weight actually backed by a price that day, so the caller can warn when
-    it drops (missing/delisted constituents, holiday mismatches) instead of
-    silently understating the total."""
+def anchor_prices(close_panel: pd.DataFrame, as_of_date) -> pd.Series:
+    """Each ticker's last close on/before as_of_date (the date the official
+    weights were measured at) - the price the weights already embed. NaN for
+    a ticker with no price on/before that date (never taken from after it)."""
+    upto = close_panel.loc[close_panel.index <= pd.Timestamp(as_of_date)]
+    if upto.empty:
+        return pd.Series(np.nan, index=close_panel.columns, dtype=float)
+    return upto.ffill().iloc[-1]
+
+
+# Below this share of index weight with a genuine price on a date, the date
+# is a data gap (e.g. a whole-market placeholder session from the price
+# feed), not a few untraded stocks - carrying every price forward would
+# fabricate a flat day, so no calculated value is produced for it.
+MIN_PRICED_WEIGHT_PCT = 50.0
+
+
+def compute_raw_weighted_series(
+    close_panel: pd.DataFrame, weight_panel: pd.DataFrame, anchor: pd.Series
+) -> tuple[pd.Series, pd.Series]:
+    """For each date present in both panels: raw weighted value =
+    Sum(weight * price / anchor_price) / Sum(weight) * 100 over tickers that
+    have an official weight and an anchor price (see anchor_prices). A
+    constituent that didn't trade on a date has its last price carried
+    forward (as NSE does for a suspended stock), never back-filled; a date
+    where under MIN_PRICED_WEIGHT_PCT of the weight traded is NaN.
+
+    Also returns `coverage_pct` = the share of official index weight with a
+    genuine (not carried-forward) price that day, so the caller can warn
+    when it drops instead of silently computing from stale prices."""
     common_dates = close_panel.index.intersection(weight_panel.index)
+    prices = close_panel.ffill()
     raw = pd.Series(index=common_dates, dtype=float)
     coverage = pd.Series(index=common_dates, dtype=float)
 
     for d in common_dates:
         w = weight_panel.loc[d].dropna()
-        if w.empty:
+        p = prices.loc[d].reindex(w.index)
+        p0 = anchor.reindex(w.index)
+        valid = p.notna() & p0.notna() & (p0 > 0)
+        traded = valid & close_panel.loc[d].reindex(w.index).notna()
+        coverage.loc[d] = float(w[traded].sum())
+        w_valid = w[valid]
+        if w_valid.sum() <= 0 or coverage.loc[d] < MIN_PRICED_WEIGHT_PCT:
             raw.loc[d] = np.nan
-            coverage.loc[d] = 0.0
             continue
-        p = close_panel.loc[d].reindex(w.index)
-        valid = p.notna()
-        raw.loc[d] = float((p[valid] * w[valid] / 100.0).sum())
-        coverage.loc[d] = float(w[valid].sum())
+        raw.loc[d] = float((w_valid * p[valid] / p0[valid]).sum() / w_valid.sum() * 100.0)
 
     return raw, coverage
 
@@ -141,6 +173,7 @@ def discrepancy_metrics(calculated: pd.Series, official: pd.Series) -> dict:
             "current_diff": None,
             "current_diff_pct": None,
             "max_abs_diff": None,
+            "max_diff": None,
             "max_abs_diff_pct": None,
             "max_abs_diff_date": None,
             "mean_abs_diff": None,
@@ -157,6 +190,7 @@ def discrepancy_metrics(calculated: pd.Series, official: pd.Series) -> dict:
         "current_diff": float(diff.iloc[-1]),
         "current_diff_pct": float(pct.iloc[-1]),
         "max_abs_diff": float(diff.abs().max()),
+        "max_diff": float(diff.loc[max_idx]),
         "max_abs_diff_pct": float(pct.loc[max_idx]),
         "max_abs_diff_date": max_idx,
         "mean_abs_diff": float(diff.abs().mean()),

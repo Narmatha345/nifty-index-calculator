@@ -1,6 +1,7 @@
 """NIFTY discrepancy analysis dashboard - compares three time-series:
 
-  1. Calculated NIFTY   - Sum(Price x official NSE weight), calibrated once
+  1. Calculated NIFTY   - official NSE weights applied to each stock's price
+                          relative to the weights' as-of date, calibrated once
                           against ^NSEI at a chosen baseline date.
   2. Actual NIFTY 50    - ^NSEI, fetched live from Yahoo Finance.
   3. NIFTY ETF          - a configurable NIFTY-tracking ETF's market price.
@@ -24,6 +25,7 @@ from common import (
     inject_css,
     load_price_history,
     load_weights_history,
+    price_fetch_window,
     render_hero,
     render_info_alert,
     render_missing_data_alert,
@@ -34,7 +36,7 @@ from common import (
     resolve_range,
     set_home_inputs,
 )
-from nifty_calc import engine, weights
+from nifty_calc import corporate_actions, engine, weights
 
 st.set_page_config(page_title=f"{config.INDEX_NAME} Discrepancy Analysis", layout="wide")
 
@@ -227,29 +229,32 @@ def main():
         st.stop()
 
     weight_series = period_df.set_index("ticker")["weight_pct"]
+    weight_as_of = period_df["as_of_date"].max()
     tickers = list(weight_series.index)
 
     # --------------------------------------------------------------- Prices
-    fetch_tickers = tuple(sorted(set(tickers) | {config.OFFICIAL_INDEX_TICKER, etf_ticker}))
-    price_dict, interval_used = load_price_history(fetch_tickers, start_ts, end_ts, "1d")
+    fetch_tickers = tuple(sorted(set(corporate_actions.price_sources(tickers)) | {config.OFFICIAL_INDEX_TICKER, etf_ticker}))
+    fetch_start, fetch_end = price_fetch_window(start_ts, end_ts, weight_as_of)
+    price_dict, interval_used = load_price_history(fetch_tickers, fetch_start, fetch_end, "1d")
     if interval_used != "1d":
         render_warning_alert(f"Daily resolution wasn't available for this range - showing **{interval_used}** instead.")
 
     official_df = price_dict.get(config.OFFICIAL_INDEX_TICKER, pd.DataFrame())
     etf_df = price_dict.get(etf_ticker, pd.DataFrame())
-    stock_prices = {t: df for t, df in price_dict.items() if t not in (config.OFFICIAL_INDEX_TICKER, etf_ticker)}
-    close_panel = engine.build_close_panel(stock_prices)
+    full_close_panel = corporate_actions.build_constituent_close_panel(tickers, price_dict, weight_as_of)
+    anchor = engine.anchor_prices(full_close_panel, weight_as_of) if not full_close_panel.empty else pd.Series(dtype=float)
+    close_panel = full_close_panel.loc[start_ts:end_ts]
 
     if close_panel.empty or official_df.empty:
         render_warning_alert("No price data available for the selected range yet. Try a different range.")
         st.stop()
 
-    official_series = official_df["Close"]
-    etf_series = etf_df["Close"] if not etf_df.empty else pd.Series(dtype=float)
+    official_series = official_df["Close"].loc[start_ts:end_ts]
+    etf_series = etf_df["Close"].loc[start_ts:end_ts] if not etf_df.empty else pd.Series(dtype=float)
 
     # ------------------------------------------------------------ Calculate
     weight_panel = engine.build_static_weight_panel(weight_series, close_panel.index)
-    raw_series, coverage_pct = engine.compute_raw_weighted_series(close_panel, weight_panel)
+    raw_series, coverage_pct = engine.compute_raw_weighted_series(close_panel, weight_panel, anchor)
 
     try:
         baseline_info = engine.calibrate_baseline(raw_series, official_series, baseline_date)
@@ -259,11 +264,15 @@ def main():
 
     calculated_series = engine.compute_calculated_series(raw_series, baseline_info["normalization_factor"])
 
-    low_coverage_dates = coverage_pct[coverage_pct < 98.0].dropna()
+    # Only sessions the index actually traded - the price feed also serves
+    # placeholder stock bars on exchange holidays.
+    trading_coverage = coverage_pct.reindex(official_series.dropna().index).dropna()
+    low_coverage_dates = trading_coverage[trading_coverage < 98.0]
     if not low_coverage_dates.empty:
         render_warning_alert(
-            f"{len(low_coverage_dates)} date(s) had official-weight coverage below 98% (missing prices for "
-            "some constituents that day) - the calculated value on those dates is based on partial coverage."
+            f"{len(low_coverage_dates)} date(s) had a genuine price for less than 98% of official index weight. "
+            "Constituents that didn't trade use their last price; dates where under half the index weight "
+            "has a price are a data gap in the price feed and have no calculated value."
         )
 
     # ------------------------------------------------------------- Metrics
@@ -283,7 +292,7 @@ def main():
         c2.metric(f"Actual NIFTY ({config.OFFICIAL_INDEX_TICKER})", f"{latest_official:,.2f}")
         c3.metric(f"NIFTY ETF ({etf_ticker})", f"{latest_etf:,.2f}" if latest_etf is not None else "N/A")
         c4.metric("Current difference", f"{metrics['current_diff']:+,.2f}", f"{metrics['current_diff_pct']:+.3f}%")
-        c5.metric("Max deviation", f"{metrics['max_abs_diff']:+,.2f}", f"{metrics['max_abs_diff_pct']:+.3f}%")
+        c5.metric("Max deviation", f"{metrics['max_diff']:+,.2f}", f"{metrics['max_abs_diff_pct']:+.3f}%")
 
         render_info_alert(
             f"Baseline: <strong>{baseline_info['baseline_date_used'].date()}</strong> "
